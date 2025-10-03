@@ -21,7 +21,7 @@ from .utils import check_type, encode_dict, debug
 #  (c) track the index in the parent in case of list
 # They attach these three to the elements requested through __getattr__
 
-class ListContainer(MutableSequence):
+class ListContainer(MutableSequence[object]):
     """
     Wrapper around a list, to track the elements' parents.
     **This class shouldn't be instantiated directly by users,
@@ -40,9 +40,9 @@ class ListContainer(MutableSequence):
 
     __slots__ = ['list', 'oktypes', 'parent', 'location']
 
-    def __init__(self, *args, oktypes=object, parent=None):
-        self.oktypes = oktypes
-        self.parent = parent
+    def __init__(self, *args: MutableSequence[object], oktypes: type | tuple[type]=object, parent: object | None=None):
+        self.oktypes: type | tuple[type] = oktypes
+        self.parent: object | None = parent
         self.location = None  # Cannot be set through __init__
 
         self.list = []
@@ -73,10 +73,12 @@ class ListContainer(MutableSequence):
         else:
             v = check_type(v, self.oktypes)
         self.list[i] = v
+        attach(self.list[i], self.parent, self.location, i)
 
-    def insert(self, i, v):
+    def insert(self, i: int, v):
         v = check_type(v, self.oktypes)
         self.list.insert(i, v)
+        attach(self.list[i], self.parent, self.location, i)
 
     def walk(self, action, doc=None, stop_if=None):
         ans = (item.walk(action, doc, stop_if) for item in self)
@@ -107,7 +109,7 @@ class ListContainer(MutableSequence):
         return [to_json_wrapper(item) for item in self.list]
 
 
-class DictContainer(MutableMapping):
+class DictContainer(MutableMapping[str, object]):
     """
     Wrapper around a dict, to track the elements' parents.
     **This class shouldn't be instantiated directly by users,
@@ -122,9 +124,9 @@ class DictContainer(MutableMapping):
 
     __slots__ = ['dict', 'oktypes', 'parent', 'location']
 
-    def __init__(self, *args, oktypes=object, parent=None, **kwargs):
-        self.oktypes = oktypes
-        self.parent = parent
+    def __init__(self, *args: MutableMapping[str, object], oktypes: type | tuple[type]=object, parent: Element | None=None, **kwargs):
+        self.oktypes: type | tuple[type] = oktypes
+        self.parent: object | None = parent
         self.location = None
 
         self.dict = dict()
@@ -146,6 +148,7 @@ class DictContainer(MutableMapping):
     def __setitem__(self, k, v):
         v = check_type(v, self.oktypes)
         self.dict[k] = v
+        attach(self.dict[k], self.parent, self.location)
 
     def walk(self, action, doc=None, stop_if=None):
         ans = ((k, v.walk(action, doc, stop_if)) for k, v in self.items())
